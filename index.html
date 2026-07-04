@@ -44,16 +44,6 @@
   }
   .brand h1 span{ color: var(--rust); }
   .clicks{ font-family:'JetBrains Mono', monospace; font-size:0.72rem; color: var(--ink-soft); white-space:nowrap; }
-  .hint-btn{
-    font-family:'JetBrains Mono', monospace; font-size:0.68rem; font-weight:600;
-    background: var(--gold); color: var(--ink); border: 1.5px solid var(--rust-deep);
-    border-radius:999px; padding:4px 10px; cursor:pointer; white-space:nowrap;
-  }
-  .hint-btn:active{ transform: translateY(1px); }
-  #article a.hint-glow{
-    background: var(--gold); color: var(--ink) !important; padding: 1px 4px; border-radius:3px;
-    text-decoration: none; box-shadow: 0 0 0 2px var(--rust);
-  }
 
   .quest-row{ display:flex; align-items:stretch; gap:8px; flex-wrap: wrap; }
   .quest-card{ flex:1; min-width: 140px; border:1.5px solid var(--ink); border-radius:3px; padding:7px 10px; background: var(--paper-deep); position:relative; }
@@ -135,10 +125,7 @@
 <div id="topbar" class="topbar" style="display:none;">
   <div class="brand">
     <h1>WIKI<span>QUEST</span></h1>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <button class="hint-btn mono" id="hint-btn">💡 Hint</button>
-      <div class="clicks mono" id="click-count">0 clicks</div>
-    </div>
+    <div class="clicks mono" id="click-count">0 clicks</div>
   </div>
   <div class="quest-row">
     <div class="quest-card">
@@ -199,7 +186,7 @@ const NOUN_POOL = [
 
 const NAMESPACE_BLOCK = /^\/wiki\/(File|Wikipedia|Help|Special|Talk|Category|Portal|Template|Module|Draft|TimedText|MediaWiki|User|Book|Education_Program)(_talk)?:/i;
 
-let state = { target: null, current: null, trail: [], clicks: 0, won: false, targetBacklinks: null, currentLinkTitles: [] };
+let state = { target: null, current: null, trail: [], clicks: 0, won: false };
 let player = { name: '', place: '' }; // held only in memory — never saved, gone on refresh
 
 const topbar = document.getElementById('topbar');
@@ -285,17 +272,6 @@ function renderError(msg, retryFn){
   document.getElementById('retry-btn').addEventListener('click', retryFn);
 }
 
-async function fetchBacklinks(title){
-  const url = "https://en.wikipedia.org/w/api.php?action=query&list=backlinks&bltitle=" +
-    encodeURIComponent(title) + "&bllimit=500&blnamespace=0&format=json&origin=*";
-  const res = await fetch(url);
-  if(!res.ok) throw new Error("network");
-  const data = await res.json();
-  const set = new Set();
-  (data.query && data.query.backlinks ? data.query.backlinks : []).forEach(b => set.add(normalize(b.title)));
-  return set;
-}
-
 async function fetchRandomTitle(){
   const url = "https://en.wikipedia.org/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=1&format=json&origin=*";
   const res = await fetch(url);
@@ -304,9 +280,10 @@ async function fetchRandomTitle(){
   return data.query.random[0].title;
 }
 
-async function fetchArticle(title){
+async function fetchArticle(title, full){
+  const sectionParam = full ? "" : "&section=0";
   const url = "https://en.wikipedia.org/w/api.php?action=parse&page=" + encodeURIComponent(title) +
-    "&redirects=1&format=json&prop=text|displaytitle&origin=*";
+    sectionParam + "&redirects=1&format=json&prop=text|displaytitle&origin=*";
   const res = await fetch(url);
   if(!res.ok) throw new Error("network");
   const data = await res.json();
@@ -318,10 +295,11 @@ async function fetchArticle(title){
 }
 
 async function getPreparedArticle(title){
-  const article = await fetchArticle(title);
-  let cleanHtml = sanitizeHtml(article.html, false);
+  let article = await fetchArticle(title, false);
+  let cleanHtml = sanitizeHtml(article.html);
   if(countLinks(cleanHtml) === 0){
-    cleanHtml = sanitizeHtml(article.html, true); // fall back to the untrimmed body
+    article = await fetchArticle(title, true);
+    cleanHtml = sanitizeHtml(article.html);
   }
   return { title: article.title, html: cleanHtml };
 }
@@ -336,7 +314,7 @@ function pickTarget(excludeTitle){
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
-function sanitizeHtml(html, notrim){
+function sanitizeHtml(html){
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const killSelectors = [
     '.mw-editsection', 'sup.reference', 'style', 'script',
@@ -357,27 +335,7 @@ function sanitizeHtml(html, notrim){
       a.removeAttribute('href');
     }
   });
-
-  if(notrim){
-    return doc.body.innerHTML;
-  }
-
-  // Keep only the lead + a bit of the first section, so pages stay short
-  // but still carry enough links to give real navigation choices.
-  const container = doc.createElement('div');
-  let paraCount = 0;
-  const MAX_PARAGRAPHS = 9;
-  for(const child of Array.from(doc.body.children)){
-    if(/^H[2-6]$/.test(child.tagName) && paraCount >= 3){
-      break; // stop once we've passed a real section heading after some content
-    }
-    container.appendChild(child.cloneNode(true));
-    if(child.tagName === 'P' && child.textContent.trim().length > 0){
-      paraCount++;
-    }
-    if(paraCount >= MAX_PARAGRAPHS) break;
-  }
-  return container.innerHTML;
+  return doc.body.innerHTML;
 }
 
 function renderTrail(){
@@ -405,8 +363,6 @@ function renderArticle(article){
   renderTrail();
 
   articleWrap.innerHTML = `<div id="article"><h1 class="article-title">${article.title}</h1>${article.html}</div>`;
-  state.currentLinkTitles = Array.from(document.querySelectorAll('#article a[data-wiki-title]'))
-    .map(a => a.getAttribute('data-wiki-title'));
 
   document.getElementById('article').addEventListener('click', function(e){
     const link = e.target.closest('a');
@@ -421,12 +377,69 @@ function renderArticle(article){
   });
 }
 
-async function handleHint(){
-  const btn = document.getElementById('hint-btn');
-  if(!btn) return;
-  btn.disabled = true;
-  const originalLabel = btn.textContent;
-  btn.textContent = '💡 …';
+async function handleNavigate(title){
+  if(state.won) return;
+  renderLoading('Turning the page…');
   try{
-    if(!state.targetBacklinks){
-      state.targetBacklin
+    const article = await getPreparedArticle(title);
+    state.clicks += 1;
+    state.current = article.title;
+    state.trail.push(article.title);
+    topbar.style.display = 'block';
+    renderArticle(article);
+
+    if(normalize(article.title) === normalize(state.target)){
+      state.won = true;
+      showWin();
+    }
+  }catch(err){
+    renderError("That page wouldn't load. The trail may have hit a redirect or a network hiccup.", () => handleNavigate(title));
+  }
+}
+
+function showWin(){
+  const overlay = document.createElement('div');
+  overlay.className = 'win-overlay';
+  overlay.innerHTML = `
+    <div class="win-card">
+      <div class="flag">🏁</div>
+      <h2>${player.name}, you reached ${state.target}!</h2>
+      <p>Trail complete — nicely navigated, traveler from ${player.place}.</p>
+      <div class="win-stats">
+        <div class="row"><span>Clicks taken</span><span>${state.clicks}</span></div>
+        <div class="row"><span>Pages visited</span><span>${state.trail.length}</span></div>
+      </div>
+      <div class="win-trail mono">${state.trail.join(' → ')}</div>
+      <div class="btn-row" style="margin-top:18px;">
+        <button class="btn" id="again-btn">Play again</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('again-btn').addEventListener('click', ()=>{
+    overlay.remove();
+    startGame();
+  });
+}
+
+async function startGame(){
+  state = { target: null, current: null, trail: [], clicks: 0, won: false };
+  topbar.style.display = 'none';
+  renderLoading('Rolling the dice on a starting page…');
+  try{
+    const startTitle = await fetchRandomTitle();
+    const article = await getPreparedArticle(startTitle);
+    state.target = pickTarget(article.title);
+    state.current = article.title;
+    state.trail = [article.title];
+    topbar.style.display = 'block';
+    renderArticle(article);
+  }catch(err){
+    renderError("Couldn't reach Wikipedia to start the quest. Check your connection and try again.", startGame);
+  }
+}
+
+renderEntryScreen();
+</script>
+</body>
+</html>
