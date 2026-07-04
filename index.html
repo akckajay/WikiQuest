@@ -280,9 +280,10 @@ async function fetchRandomTitle(){
   return data.query.random[0].title;
 }
 
-async function fetchArticle(title){
+async function fetchArticle(title, full){
+  const sectionParam = full ? "" : "&section=0";
   const url = "https://en.wikipedia.org/w/api.php?action=parse&page=" + encodeURIComponent(title) +
-    "&redirects=1&format=json&prop=text|displaytitle&origin=*";
+    sectionParam + "&redirects=1&format=json&prop=text|displaytitle&origin=*";
   const res = await fetch(url);
   if(!res.ok) throw new Error("network");
   const data = await res.json();
@@ -291,6 +292,21 @@ async function fetchArticle(title){
     title: data.parse.displaytitle.replace(/<[^>]+>/g,''),
     html: data.parse.text['*']
   };
+}
+
+async function getPreparedArticle(title){
+  let article = await fetchArticle(title, false);
+  let cleanHtml = sanitizeHtml(article.html);
+  if(countLinks(cleanHtml) === 0){
+    article = await fetchArticle(title, true);
+    cleanHtml = sanitizeHtml(article.html);
+  }
+  return { title: article.title, html: cleanHtml };
+}
+
+function countLinks(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.querySelectorAll('a[data-wiki-title]').length;
 }
 
 function pickTarget(excludeTitle){
@@ -346,7 +362,7 @@ function renderArticle(article){
   document.getElementById('player-row').innerHTML = `Playing as <span>${player.name}</span> from <span>${player.place}</span>`;
   renderTrail();
 
-  articleWrap.innerHTML = `<div id="article"><h1 class="article-title">${article.title}</h1>${sanitizeHtml(article.html)}</div>`;
+  articleWrap.innerHTML = `<div id="article"><h1 class="article-title">${article.title}</h1>${article.html}</div>`;
 
   document.getElementById('article').addEventListener('click', function(e){
     const link = e.target.closest('a');
@@ -365,7 +381,7 @@ async function handleNavigate(title){
   if(state.won) return;
   renderLoading('Turning the page…');
   try{
-    const article = await fetchArticle(title);
+    const article = await getPreparedArticle(title);
     state.clicks += 1;
     state.current = article.title;
     state.trail.push(article.title);
@@ -412,7 +428,7 @@ async function startGame(){
   renderLoading('Rolling the dice on a starting page…');
   try{
     const startTitle = await fetchRandomTitle();
-    const article = await fetchArticle(startTitle);
+    const article = await getPreparedArticle(startTitle);
     state.target = pickTarget(article.title);
     state.current = article.title;
     state.trail = [article.title];
