@@ -1,0 +1,50 @@
+name: Build Android APK
+
+# Builds a signed APK from the live WikiQuest site using Bubblewrap (Trusted Web Activity).
+# Requires a repository secret named ANDROID_KEYSTORE_BASE64 to already exist —
+# see the setup notes for how to create it from the keystore artifact.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'twa-manifest.json'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Restore keystore from secret
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android.keystore
+
+      - name: Build APK with Bubblewrap
+        run: |
+          bubblewrap build --skipPwaValidation
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: wikiquest123
+          BUBBLEWRAP_KEY_PASSWORD: wikiquest123
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wikiquest-apk
+          path: app-release-signed.apk
