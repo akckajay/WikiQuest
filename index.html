@@ -71,11 +71,19 @@
   .trail-dots{ width:16px; height:1px; border-top: 2px dotted var(--ink-soft); flex-shrink:0; margin: 0 2px; }
 
   #article-wrap{ padding: 16px 16px 90px; max-width: 720px; margin: 0 auto; }
-  #article{ font-size: 1.05rem; line-height: 1.7; }
-  #article h1.article-title{ font-size:1.7rem; font-weight:700; margin: 0 0 0.5em; }
-  #article p{ margin: 0.9em 0; }
-  #article a{ color: var(--rust-deep); text-decoration: underline; text-decoration-color: rgba(189,91,56,0.4); text-underline-offset:2px; cursor:pointer; font-weight:600; }
+  #article{ font-size: 1rem; line-height: 1.65; }
+  #article h2, #article h3{ font-family:'Spectral', serif; font-weight:600; border-bottom: 1px solid var(--line); padding-bottom:4px; margin-top: 1.6em; }
+  #article p{ margin: 0.85em 0; }
+  #article a{ color: var(--rust-deep); text-decoration: underline; text-decoration-color: rgba(189,91,56,0.4); text-underline-offset:2px; cursor:pointer; }
+  #article a.na-link{ color: var(--ink-soft); text-decoration: none; cursor: default; border-bottom: 1px dotted var(--ink-soft); }
   #article a:hover{ text-decoration-color: var(--rust-deep); }
+  #article img{ max-width:100%; height:auto; border-radius:2px; }
+  #article table{ max-width:100%; display:block; overflow-x:auto; font-size:0.82rem; border-collapse: collapse;}
+  #article .infobox{ font-size: 0.78rem; float:none !important; margin: 1em 0 !important; width:100% !important; border:1px solid var(--line); background: var(--paper-deep); }
+  #article sup, #article .mw-editsection, #article .noprint, #article .mw-empty-elt { display:none; }
+  #article ul, #article ol{ padding-left: 1.4em; }
+  #article table td, #article table th{ padding: 4px 6px; border: 1px solid var(--line); }
+  #article h1.article-title{ font-size:1.7rem; font-weight:700; border:none; margin: 0 0 0.4em; padding:0; }
 
   .center-screen{ min-height: 70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 24px; }
   .compass{ font-size: 2.4rem; margin-bottom: 6px; }
@@ -87,7 +95,11 @@
     box-shadow: 3px 3px 0 var(--rust); transition: transform 0.1s ease;
   }
   .btn:active{ transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--rust); }
+  .btn.secondary{ background: var(--paper); color: var(--ink); border: 1.5px solid var(--ink); box-shadow: 3px 3px 0 var(--moss); }
   .btn-row{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+  .spinner{ width:26px; height:26px; border-radius:50%; border: 3px solid var(--line); border-top-color: var(--rust); animation: spin 0.8s linear infinite; margin-bottom: 14px; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
 
   .win-overlay{ position: fixed; inset:0; background: rgba(42,36,32,0.55); display:flex; align-items:center; justify-content:center; z-index:50; padding: 20px; }
   .win-card{ background: var(--paper); border: 2px solid var(--ink); border-radius:5px; max-width: 420px; width:100%; padding: 26px 22px; text-align:center; box-shadow: 6px 6px 0 var(--rust); }
@@ -133,41 +145,46 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// Self-contained topic graph — no network calls needed, works fully offline.
-const GRAPH = {
-  "Elephant": "The elephant is the largest living land animal, known for its long trunk and curved [[Ivory]] tusks. Wild herds roam the [[Savanna]] and forests of [[Africa]], led by an experienced matriarch. Their closest ancient relative, the woolly [[Mammoth]], died out thousands of years ago.",
-  "Ivory": "Ivory is the dense white material that makes up tusks and teeth, prized for centuries for carving and old [[Piano]] keys. Most commercial ivory historically came from [[Elephant]] tusks, though [[Mammoth]] tusks preserved in permafrost are also a legal source today.",
-  "Africa": "Africa is the second-largest continent, home to vast deserts, dense [[Rainforest]], and the open grassland called [[Savanna]]. It supports some of the planet's most iconic wildlife, including the [[Elephant]] and the [[Lion]].",
-  "Savanna": "A savanna is a wide grassland dotted with scattered trees, found across much of [[Africa]]. It supports grazing herds and their predators, most famously the [[Lion]], and borders both desert and [[Rainforest]] regions.",
-  "Lion": "The lion is a large, social big cat and one of nature's most recognizable [[Predator]]s. Lions live in prides across the [[Savanna]] and grasslands of [[Africa]], hunting cooperatively for large prey.",
-  "Predator": "A predator is any animal that hunts and feeds on other animals to survive. Predators like the [[Lion]] on land and the [[Shark]] in the [[Ocean]] play a key role in balancing ecosystems.",
-  "Piano": "The piano is a keyboard instrument that produces sound when hammers strike internal strings. Its keys were traditionally topped with [[Ivory]], and it remains a central instrument in both solo [[Music]] and the full [[Orchestra]].",
-  "Music": "Music is the art of arranging sound, rhythm, and pitch to create expression. It's produced by instruments ranging from the [[Piano]] and [[Guitar]] to full ensembles like the [[Orchestra]], and travels to our ears as a [[Sound Wave]].",
-  "Orchestra": "An orchestra is a large ensemble combining string, wind, brass, and percussion instruments to perform complex [[Music]]. The [[Piano]] and [[String Instrument]] families are core to its sound.",
-  "Volcano": "A volcano is an opening in the Earth's surface where molten rock, or [[Lava]], escapes from below. Volcanoes form at boundaries between [[Tectonic Plates]] and can trigger powerful [[Earthquake]]s nearby.",
-  "Lava": "Lava is molten rock that reaches the Earth's surface during a [[Volcano]] eruption, cooling into hardened rock over time. Its movement is driven by pressure building beneath shifting [[Tectonic Plates]].",
-  "Tectonic Plates": "Tectonic plates are massive slabs of the Earth's crust that slowly drift over time. Their collisions and separations cause [[Earthquake]]s, build mountains, and fuel [[Volcano]] activity, and their boundaries often lie beneath the [[Ocean]].",
-  "Earthquake": "An earthquake is a sudden shaking of the ground caused by the movement of [[Tectonic Plates]] deep underground. Large earthquakes can also trigger eruptions from a nearby [[Volcano]] or waves across the [[Ocean]].",
-  "Ocean": "The ocean is the vast body of saltwater covering most of the planet, home to the [[Coral Reef]], countless [[Fish]], and predators like the [[Shark]]. Its floor is shaped by shifting [[Tectonic Plates]].",
-  "Coral Reef": "A coral reef is a colorful underwater structure built by tiny living organisms over centuries. Reefs shelter an enormous variety of [[Fish]] and other [[Ocean]] life, though they can attract the occasional [[Shark]].",
-  "Shark": "The shark is a cartilage-skeletoned [[Predator]] that has patrolled the world's [[Ocean]]s for millions of years. Sharks often hunt near a [[Coral Reef]], where [[Fish]] gather in large numbers.",
-  "Fish": "Fish are cold-blooded animals that breathe through gills and live throughout the [[Ocean]] and freshwater [[River]]s. Many species shelter among a [[Coral Reef]], while others are hunted by the [[Shark]].",
-  "Guitar": "The guitar is a stringed instrument played by plucking or strumming, central to countless styles of [[Music]]. As a [[String Instrument]], it produces tone through vibration that travels as a [[Sound Wave]].",
-  "String Instrument": "A string instrument produces sound through vibrating strings, stretched across a body and plucked, bowed, or struck. The [[Guitar]] and [[Piano]] both belong to this broad family used throughout [[Music]] and the [[Orchestra]].",
-  "Sound Wave": "A sound wave is a vibration that travels through air or water, carrying the tones we hear as [[Music]]. Instruments like the [[Guitar]] and [[String Instrument]] family generate these waves through physical vibration.",
-  "Chocolate": "Chocolate is a food made from roasted and ground [[Cacao]] beans, prized worldwide for its rich flavor. Cacao trees grow naturally in humid [[Rainforest]] regions near the equator.",
-  "Cacao": "Cacao is the tropical tree bean used to make [[Chocolate]], traditionally grown in the shaded understory of the [[Rainforest]] along rivers like the [[Amazon River]].",
-  "Rainforest": "A rainforest is a dense, warm, high-rainfall forest teeming with biodiversity, found in parts of [[Africa]] and along the [[Amazon River]]. It's the natural home of the [[Cacao]] tree, source of [[Chocolate]].",
-  "Amazon River": "The Amazon River is the largest river by water volume on Earth, winding through the South American [[Rainforest]]. Its basin supports countless species and feeds smaller streams that lead to a [[Waterfall]] or join the wider [[River]] network.",
-  "River": "A river is a natural flowing body of freshwater that carves through landscapes on its way to the sea. Rivers like the [[Amazon River]] can plunge over cliffs to form a [[Waterfall]], and are often fed by melting [[Glacier]] ice.",
-  "Waterfall": "A waterfall forms where a [[River]] drops suddenly over a cliff or steep ledge, often carved by erosion over thousands of years. Many are fed by glacial melt from a retreating [[Glacier]].",
-  "Glacier": "A glacier is a massive, slow-moving body of ice formed from compacted snow over centuries. Glaciers carve valleys, feed rivers, and are a lasting remnant of the last [[Ice Age]].",
-  "Ice Age": "An ice age is a long period of the Earth's history marked by widespread [[Glacier]] growth and cooler global temperatures. The most recent ice age saw the rise of the woolly [[Mammoth]], whose remains are still found today as [[Fossil]] evidence.",
-  "Mammoth": "The mammoth was a large, tusked relative of the modern [[Elephant]] that thrived during the [[Ice Age]]. Frozen remains preserved in ice have yielded remarkably intact [[Fossil]] specimens, including tusks made of [[Ivory]].",
-  "Fossil": "A fossil is the preserved remains or trace of an ancient organism, often found in rock or ice from the [[Ice Age]]. Fossils of creatures like the [[Mammoth]] help scientists understand life on ancient [[Africa]] and beyond."
-};
+// Target pool: hundreds of popular, well-known Wikipedia titles spanning
+// people, places, and things — the live Wikipedia API supplies everything else.
+const NOUN_POOL = [
+  // People
+  "Albert Einstein","Isaac Newton","Leonardo da Vinci","Mahatma Gandhi","Cleopatra",
+  "Julius Caesar","Napoleon","Abraham Lincoln","Nelson Mandela","Marie Curie",
+  "William Shakespeare","Charles Darwin","Nikola Tesla","Alexander the Great","Genghis Khan",
+  "Confucius","Aristotle","Socrates","Plato","Galileo Galilei","Thomas Edison",
+  "Wright brothers","Martin Luther King Jr.","Winston Churchill","Elizabeth II","Mark Twain",
+  "Vincent van Gogh","Pablo Picasso","Wolfgang Amadeus Mozart","Ludwig van Beethoven",
+  "Christopher Columbus","Marco Polo","Joan of Arc","Florence Nightingale","Rosa Parks",
+  "Amelia Earhart","Stephen Hawking","Ada Lovelace","Leonardo Fibonacci","Archimedes",
+  "Hippocrates","Homer","Michelangelo","Rembrandt","Ludwig Wittgenstein","Karl Marx",
+  "Sigmund Freud","Carl Jung","Immanuel Kant","Rene Descartes",
+  // Places
+  "Paris","Tokyo","New York City","London","Mount Everest","Great Wall of China",
+  "Eiffel Tower","Taj Mahal","Amazon rainforest","Sahara","Nile","Grand Canyon",
+  "Great Barrier Reef","Antarctica","Sydney Opera House","Statue of Liberty",
+  "Machu Picchu","Colosseum","Great Pyramid of Giza","Niagara Falls","Venice",
+  "Rome","Cairo","Moscow","Beijing","Dubai","Jerusalem","Athens","Berlin","Rio de Janeiro",
+  "Himalayas","Andes","Pacific Ocean","Atlantic Ocean","Mediterranean Sea","Iceland",
+  "Galapagos Islands","Stonehenge","Petra","Angkor Wat","Mount Fuji","Yellowstone National Park",
+  // Animals & nature
+  "Elephant","Lion","Tiger","Dolphin","Kangaroo","Penguin","Panda","Blue whale",
+  "Octopus","Butterfly","Cheetah","Gorilla","Polar bear","Shark","Eagle","Owl",
+  "Coral reef","Volcano","Glacier","Tornado","Earthquake","Rainbow","Aurora",
+  // Science & tech
+  "Telescope","Microscope","Internet","Electricity","Gravity","Photosynthesis",
+  "DNA","Solar System","Black hole","Robot","Satellite","Computer","Airplane",
+  "Steam engine","Periodic table","Vaccine","Nuclear reactor","Artificial intelligence",
+  // Culture & food
+  "Chocolate","Sushi","Pizza","Coffee","Tea","Piano","Guitar","Violin","Orchestra",
+  "Jazz","Opera","Ballet","Chess","Olympic Games","Origami","Yoga",
+  // Objects & concepts
+  "Compass","Lighthouse","Camera","Umbrella","Diamond","Castle","Submarine",
+  "Helicopter","Bicycle","Windmill","Hourglass","Kite","Lantern","Mosaic",
+  "Labyrinth","Marathon","Nebula","Zeppelin","Igloo","Cactus","Waterfall"
+];
 
-const TOPICS = Object.keys(GRAPH);
+const NAMESPACE_BLOCK = /^\/wiki\/(File|Wikipedia|Help|Special|Talk|Category|Portal|Template|Module|Draft|TimedText|MediaWiki|User|Book|Education_Program)(_talk)?:/i;
 
 let state = { target: null, current: null, trail: [], clicks: 0, won: false };
 let player = { name: '', place: '' }; // held only in memory — never saved, gone on refresh
@@ -180,6 +197,10 @@ function showToast(msg){
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   setTimeout(()=> toastEl.classList.remove('show'), 1800);
+}
+
+function normalize(title){
+  return decodeURIComponent(title).replace(/_/g,' ').trim().toLowerCase();
 }
 
 function renderEntryScreen(){
@@ -219,7 +240,7 @@ function renderStartScreen(){
     <div class="center-screen">
       <div class="compass">🧭</div>
       <h2>WIKIQUEST</h2>
-      <p>You'll land on a random topic page. Click through its linked words, subject to subject,
+      <p>You'll land on a random Wikipedia page. Click through its links, subject to subject,
       until you reach the destination word. Every click counts — find the shortest trail.</p>
       <div class="btn-row">
         <button class="btn" id="start-btn">Begin quest</button>
@@ -227,6 +248,78 @@ function renderStartScreen(){
     </div>
   `;
   document.getElementById('start-btn').addEventListener('click', startGame);
+}
+
+function renderLoading(msg){
+  articleWrap.innerHTML = `
+    <div class="center-screen">
+      <div class="spinner"></div>
+      <p>${msg}</p>
+    </div>
+  `;
+}
+
+function renderError(msg, retryFn){
+  articleWrap.innerHTML = `
+    <div class="center-screen">
+      <h2>Trail lost</h2>
+      <p>${msg}</p>
+      <div class="btn-row">
+        <button class="btn" id="retry-btn">Try again</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('retry-btn').addEventListener('click', retryFn);
+}
+
+async function fetchRandomTitle(){
+  const url = "https://en.wikipedia.org/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=1&format=json&origin=*";
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("network");
+  const data = await res.json();
+  return data.query.random[0].title;
+}
+
+async function fetchArticle(title){
+  const url = "https://en.wikipedia.org/w/api.php?action=parse&page=" + encodeURIComponent(title) +
+    "&redirects=1&format=json&prop=text|displaytitle&origin=*";
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("network");
+  const data = await res.json();
+  if(data.error) throw new Error(data.error.info || "not found");
+  return {
+    title: data.parse.displaytitle.replace(/<[^>]+>/g,''),
+    html: data.parse.text['*']
+  };
+}
+
+function pickTarget(excludeTitle){
+  let candidates = NOUN_POOL.filter(n => normalize(n) !== normalize(excludeTitle || ''));
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function sanitizeHtml(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const killSelectors = [
+    '.mw-editsection', 'sup.reference', 'style', 'script',
+    '.noprint', '.ambox', '.hatnote', '.navbox', '.metadata',
+    'table.vertical-navbox', '.sistersitebox', '#coordinates', '.mw-empty-elt',
+    '.reflist', 'ol.references'
+  ];
+  killSelectors.forEach(sel=>{
+    doc.querySelectorAll(sel).forEach(el => el.remove());
+  });
+  doc.querySelectorAll('a[href]').forEach(a=>{
+    const href = a.getAttribute('href');
+    if(!href) return;
+    if(href.startsWith('/wiki/') && !NAMESPACE_BLOCK.test(href)){
+      a.setAttribute('data-wiki-title', href.replace('/wiki/','').split('#')[0]);
+    } else {
+      a.classList.add('na-link');
+      a.removeAttribute('href');
+    }
+  });
+  return doc.body.innerHTML;
 }
 
 function renderTrail(){
@@ -246,42 +339,45 @@ function renderTrail(){
   strip.scrollLeft = strip.scrollWidth;
 }
 
-function parseLinks(text){
-  return text.replace(/\[\[(.+?)\]\]/g, (m, title) => `<a data-wiki-title="${title}">${title}</a>`);
-}
-
-function renderArticle(title){
-  document.getElementById('current-title').textContent = title;
+function renderArticle(article){
+  document.getElementById('current-title').textContent = article.title;
   document.getElementById('target-title').textContent = state.target;
   document.getElementById('click-count').textContent = state.clicks + (state.clicks === 1 ? ' click' : ' clicks');
+  document.getElementById('player-row').innerHTML = `Playing as <span>${player.name}</span> from <span>${player.place}</span>`;
   renderTrail();
 
-  const body = parseLinks(GRAPH[title]);
-  articleWrap.innerHTML = `<div id="article"><h1 class="article-title">${title}</h1><p>${body}</p></div>`;
+  articleWrap.innerHTML = `<div id="article"><h1 class="article-title">${article.title}</h1>${sanitizeHtml(article.html)}</div>`;
 
   document.getElementById('article').addEventListener('click', function(e){
     const link = e.target.closest('a');
     if(!link) return;
     e.preventDefault();
     const wikiTitle = link.getAttribute('data-wiki-title');
-    if(!wikiTitle || !GRAPH[wikiTitle]){
+    if(!wikiTitle){
       showToast("That link isn't part of the trail");
       return;
     }
-    handleNavigate(wikiTitle);
+    handleNavigate(decodeURIComponent(wikiTitle).replace(/_/g,' '));
   });
 }
 
-function handleNavigate(title){
+async function handleNavigate(title){
   if(state.won) return;
-  state.clicks += 1;
-  state.current = title;
-  state.trail.push(title);
-  renderArticle(title);
+  renderLoading('Turning the page…');
+  try{
+    const article = await fetchArticle(title);
+    state.clicks += 1;
+    state.current = article.title;
+    state.trail.push(article.title);
+    topbar.style.display = 'block';
+    renderArticle(article);
 
-  if(title === state.target){
-    state.won = true;
-    showWin();
+    if(normalize(article.title) === normalize(state.target)){
+      state.won = true;
+      showWin();
+    }
+  }catch(err){
+    renderError("That page wouldn't load. The trail may have hit a redirect or a network hiccup.", () => handleNavigate(title));
   }
 }
 
@@ -310,16 +406,21 @@ function showWin(){
   });
 }
 
-function startGame(){
-  const startTitle = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-  let target = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-  while(target === startTitle){
-    target = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+async function startGame(){
+  state = { target: null, current: null, trail: [], clicks: 0, won: false };
+  topbar.style.display = 'none';
+  renderLoading('Rolling the dice on a starting page…');
+  try{
+    const startTitle = await fetchRandomTitle();
+    const article = await fetchArticle(startTitle);
+    state.target = pickTarget(article.title);
+    state.current = article.title;
+    state.trail = [article.title];
+    topbar.style.display = 'block';
+    renderArticle(article);
+  }catch(err){
+    renderError("Couldn't reach Wikipedia to start the quest. Check your connection and try again.", startGame);
   }
-  state = { target, current: startTitle, trail: [startTitle], clicks: 0, won: false };
-  topbar.style.display = 'block';
-  document.getElementById('player-row').innerHTML = `Playing as <span>${player.name}</span> from <span>${player.place}</span>`;
-  renderArticle(startTitle);
 }
 
 renderEntryScreen();
