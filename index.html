@@ -54,6 +54,17 @@
   .quest-card.target .quest-value{ color:#fff; }
   .quest-card.target::after{ content:"⚑"; position:absolute; right:8px; top:6px; font-size:1rem; color:#fff; }
 
+  .player-row{ margin-top:8px; font-size:0.72rem; color: var(--ink-soft); }
+  .player-row span{ color: var(--moss-deep); font-weight:600; }
+
+  .entry-form{ display:flex; flex-direction:column; gap:12px; width:100%; max-width:320px; margin: 0 auto 20px; }
+  .entry-form label{ font-family:'JetBrains Mono', monospace; font-size:0.78rem; color: var(--ink-soft); text-align:left; display:block; margin-bottom:4px; }
+  .entry-form input{
+    width:100%; font-family:'Spectral', serif; font-size:1rem; padding: 10px 12px;
+    border: 1.5px solid var(--ink); border-radius:3px; background: var(--paper-deep); color: var(--ink);
+  }
+  .entry-form input:focus{ outline: 2px solid var(--rust); outline-offset:1px; }
+
   .trail-strip{ margin-top:8px; display:flex; align-items:center; gap:0; overflow-x:auto; padding-bottom:4px; scrollbar-width: thin; }
   .trail-chip{ font-family:'JetBrains Mono', monospace; font-size:0.68rem; background: var(--paper); border:1px solid var(--ink); border-radius: 999px; padding:3px 9px; white-space:nowrap; color: var(--ink-soft); flex-shrink:0; }
   .trail-chip.current{ background: var(--moss); border-color: var(--moss-deep); color:#fff; font-weight:600; }
@@ -114,6 +125,7 @@
       <span class="quest-value" id="target-title">—</span>
     </div>
   </div>
+  <div class="player-row mono" id="player-row"></div>
   <div class="trail-strip" id="trail-strip"></div>
 </div>
 
@@ -158,6 +170,7 @@ const GRAPH = {
 const TOPICS = Object.keys(GRAPH);
 
 let state = { target: null, current: null, trail: [], clicks: 0, won: false };
+let player = { name: '', place: '' }; // held only in memory — never saved, gone on refresh
 
 const topbar = document.getElementById('topbar');
 const articleWrap = document.getElementById('article-wrap');
@@ -167,6 +180,37 @@ function showToast(msg){
   toastEl.textContent = msg;
   toastEl.classList.add('show');
   setTimeout(()=> toastEl.classList.remove('show'), 1800);
+}
+
+function renderEntryScreen(){
+  topbar.style.display = 'none';
+  articleWrap.innerHTML = `
+    <div class="center-screen">
+      <div class="compass">🧭</div>
+      <h2>WIKIQUEST</h2>
+      <form class="entry-form" id="entry-form">
+        <div>
+          <label for="name-input">ಯೆನ್ ನಿನ್ ಹೆಸ್ರು?</label>
+          <input type="text" id="name-input" placeholder="Your name" maxlength="24" required>
+        </div>
+        <div>
+          <label for="place-input">ಯಾವ್ ಊರ್ ನಿಂದು?</label>
+          <input type="text" id="place-input" placeholder="Your place" maxlength="24" required>
+        </div>
+        <div class="btn-row" style="margin-top:6px;">
+          <button type="submit" class="btn">Continue</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.getElementById('entry-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    const name = document.getElementById('name-input').value.trim();
+    const place = document.getElementById('place-input').value.trim();
+    player.name = name || 'Traveler';
+    player.place = place || 'Somewhere';
+    renderStartScreen();
+  });
 }
 
 function renderStartScreen(){
@@ -247,8 +291,8 @@ function showWin(){
   overlay.innerHTML = `
     <div class="win-card">
       <div class="flag">🏁</div>
-      <h2>You reached ${state.target}!</h2>
-      <p>Trail complete — nicely navigated.</p>
+      <h2>${player.name}, you reached ${state.target}!</h2>
+      <p>Trail complete — nicely navigated, traveler from ${player.place}.</p>
       <div class="win-stats">
         <div class="row"><span>Clicks taken</span><span>${state.clicks}</span></div>
         <div class="row"><span>Pages visited</span><span>${state.trail.length}</span></div>
@@ -274,10 +318,11 @@ function startGame(){
   }
   state = { target, current: startTitle, trail: [startTitle], clicks: 0, won: false };
   topbar.style.display = 'block';
+  document.getElementById('player-row').innerHTML = `Playing as <span>${player.name}</span> from <span>${player.place}</span>`;
   renderArticle(startTitle);
 }
 
-renderStartScreen();
+renderEntryScreen();
 </script>
 </body>
 </html>
