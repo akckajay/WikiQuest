@@ -127,20 +127,6 @@
     opacity:0; pointer-events:none; transition: opacity 0.25s ease;
   }
   .toast.show{ opacity:1; }
-
-  .hint-panel{
-    max-width: 720px; margin: 0 auto; padding: 0 16px;
-  }
-  .hint-panel-inner{
-    background: var(--paper-deep); border: 1.5px solid var(--rust); border-radius:6px;
-    padding: 12px 14px; margin: 10px 0 0; font-size: 0.9rem; line-height:1.5;
-    position: relative; color: var(--ink);
-  }
-  .hint-panel-inner em{ color: var(--rust-deep); font-style: normal; font-weight:600; }
-  .hint-panel-close{
-    position:absolute; top:6px; right:8px; background:none; border:none; cursor:pointer;
-    font-size:1rem; color: var(--ink-soft); line-height:1; padding:2px;
-  }
   ::selection{ background: var(--gold); color: var(--ink); }
 </style>
 </head>
@@ -166,13 +152,6 @@
   </div>
   <div class="player-row mono" id="player-row"></div>
   <div class="trail-strip" id="trail-strip"></div>
-</div>
-
-<div class="hint-panel" id="hint-panel" style="display:none;">
-  <div class="hint-panel-inner">
-    <button class="hint-panel-close" id="hint-panel-close">✕</button>
-    <div id="hint-panel-text"></div>
-  </div>
 </div>
 
 <div id="article-wrap"></div>
@@ -220,7 +199,7 @@ const NOUN_POOL = [
 
 const NAMESPACE_BLOCK = /^\/wiki\/(File|Wikipedia|Help|Special|Talk|Category|Portal|Template|Module|Draft|TimedText|MediaWiki|User|Book|Education_Program)(_talk)?:/i;
 
-let state = { target: null, current: null, trail: [], clicks: 0, won: false, targetBacklinks: null, targetCategories: null, currentLinkTitles: [] };
+let state = { target: null, current: null, trail: [], clicks: 0, won: false, targetBacklinks: null, currentLinkTitles: [] };
 let player = { name: '', place: '' }; // held only in memory — never saved, gone on refresh
 
 const topbar = document.getElementById('topbar');
@@ -317,23 +296,6 @@ async function fetchBacklinks(title){
   return set;
 }
 
-const NOISE_CATEGORY = /articles|pages|wikipedia|cs1|dmy dates|mdy dates|short description|commons category|webarchive|dead external links|use .* english|all stub|stub articles|redirects|disambiguation/i;
-
-async function fetchCategories(title){
-  const url = "https://en.wikipedia.org/w/api.php?action=query&titles=" + encodeURIComponent(title) +
-    "&prop=categories&cllimit=50&format=json&origin=*";
-  const res = await fetch(url);
-  if(!res.ok) throw new Error("network");
-  const data = await res.json();
-  const pages = data.query && data.query.pages;
-  if(!pages) return [];
-  const page = Object.values(pages)[0];
-  if(!page || !page.categories) return [];
-  return page.categories
-    .map(c => c.title.replace(/^Category:/,'').replace(/_/g,' '))
-    .filter(c => !NOISE_CATEGORY.test(c));
-}
-
 async function fetchRandomTitle(){
   const url = "https://en.wikipedia.org/w/api.php?action=query&list=random&rnnamespace=0&rnlimit=1&format=json&origin=*";
   const res = await fetch(url);
@@ -423,4 +385,48 @@ function renderTrail(){
   strip.innerHTML = '';
   state.trail.forEach((title, i)=>{
     const chip = document.createElement('span');
-    chip.className = 'trail-chip' + (i === state.trail.length - 1 ? ' curren
+    chip.className = 'trail-chip' + (i === state.trail.length - 1 ? ' current' : '');
+    chip.textContent = title;
+    strip.appendChild(chip);
+    if(i < state.trail.length - 1){
+      const dots = document.createElement('span');
+      dots.className = 'trail-dots';
+      strip.appendChild(dots);
+    }
+  });
+  strip.scrollLeft = strip.scrollWidth;
+}
+
+function renderArticle(article){
+  document.getElementById('current-title').textContent = article.title;
+  document.getElementById('target-title').textContent = state.target;
+  document.getElementById('click-count').textContent = state.clicks + (state.clicks === 1 ? ' click' : ' clicks');
+  document.getElementById('player-row').innerHTML = `Playing as <span>${player.name}</span> from <span>${player.place}</span>`;
+  renderTrail();
+
+  articleWrap.innerHTML = `<div id="article"><h1 class="article-title">${article.title}</h1>${article.html}</div>`;
+  state.currentLinkTitles = Array.from(document.querySelectorAll('#article a[data-wiki-title]'))
+    .map(a => a.getAttribute('data-wiki-title'));
+
+  document.getElementById('article').addEventListener('click', function(e){
+    const link = e.target.closest('a');
+    if(!link) return;
+    e.preventDefault();
+    const wikiTitle = link.getAttribute('data-wiki-title');
+    if(!wikiTitle){
+      showToast("That link isn't part of the trail");
+      return;
+    }
+    handleNavigate(decodeURIComponent(wikiTitle).replace(/_/g,' '));
+  });
+}
+
+async function handleHint(){
+  const btn = document.getElementById('hint-btn');
+  if(!btn) return;
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = '💡 …';
+  try{
+    if(!state.targetBacklinks){
+      state.targetBacklin
