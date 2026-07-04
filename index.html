@@ -37,20 +37,12 @@
     border-bottom: 2px solid var(--ink);
     padding: 10px 14px 12px;
   }
-  .brand{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+  .brand{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px; }
   .brand h1{
     font-size: 1.05rem; letter-spacing: 0.12em; margin:0;
     font-family:'JetBrains Mono', monospace; font-weight:700; text-transform: uppercase;
   }
   .brand h1 span{ color: var(--rust); }
-  .top-actions{ display:flex; align-items:center; gap:8px; }
-  .giveup-btn{
-    font-family:'JetBrains Mono', monospace; font-size:0.65rem; font-weight:700;
-    background: var(--paper-deep); color: var(--ink); border: 1.5px solid var(--ink);
-    border-radius:999px; padding:5px 10px; cursor:pointer; white-space:nowrap;
-    text-transform: uppercase; letter-spacing: 0.03em;
-  }
-  .giveup-btn:active{ transform: translateY(1px); }
   .clicks{ font-family:'JetBrains Mono', monospace; font-size:0.72rem; color: var(--ink-soft); white-space:nowrap; }
 
   .quest-row{ display:flex; align-items:stretch; gap:8px; flex-wrap: wrap; }
@@ -133,10 +125,7 @@
 <div id="topbar" class="topbar" style="display:none;">
   <div class="brand">
     <h1>WIKI<span>QUEST</span></h1>
-    <div class="top-actions">
-      <button class="giveup-btn" id="giveup-btn">🎲 Give up</button>
-      <div class="clicks mono" id="click-count">0 clicks</div>
-    </div>
+    <div class="clicks mono" id="click-count">0 clicks</div>
   </div>
   <div class="quest-row">
     <div class="quest-card">
@@ -252,8 +241,7 @@ function renderStartScreen(){
       <div class="compass">🧭</div>
       <h2>WIKIQUEST</h2>
       <p>You'll land on a random Wikipedia page. Click through its links, subject to subject,
-      until you reach the destination word. Every click counts — find the shortest trail.
-      Stuck? There's a Give Up button up top to roll a fresh topic.</p>
+      until you reach the destination word. Every click counts — find the shortest trail.</p>
       <div class="btn-row">
         <button class="btn" id="start-btn">Begin quest</button>
       </div>
@@ -431,4 +419,11 @@ async function startGame(){
     topbar.style.display = 'block';
     renderArticle(article);
   }catch(err){
-    renderError("Couldn't reach Wikipedia to start the quest. Check your connection and try again.", sta
+    renderError("Couldn't reach Wikipedia to start the quest. Check your connection and try again.", startGame);
+  }
+}
+
+renderEntryScreen();
+</script>
+</body>
+</html>
