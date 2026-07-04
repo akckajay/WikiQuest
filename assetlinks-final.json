@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.akckajay.wikiquest",
+    "sha256_cert_fingerprints": ["1B:8D:89:40:FB:B5:99:26:C8:D1:67:ED:4F:5A:7A:73:9B:E9:BD:01:D2:7D:64:3A:09:59:2C:EC:3A:5A:A6:BA"]
+  }
+}]
