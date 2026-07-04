@@ -429,4 +429,102 @@ async function handleHint(){
   btn.textContent = '💡 …';
   try{
     if(!state.targetBacklinks){
-      state.targetBacklin
+      state.targetBacklinks = await fetchBacklinks(state.target);
+    }
+    // clear any previous glow
+    document.querySelectorAll('#article a.hint-glow').forEach(a => a.classList.remove('hint-glow'));
+
+    const matchTitle = state.currentLinkTitles.find(t => state.targetBacklinks.has(normalize(t)));
+    if(matchTitle){
+      const el = document.querySelector(`#article a[data-wiki-title="${CSS.escape(matchTitle)}"]`);
+      if(el){
+        el.classList.add('hint-glow');
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        showToast("Try the highlighted link");
+      } else {
+        showToast("Hint found, but couldn't highlight it — look for a strongly related link");
+      }
+    } else {
+      showToast("No one-click shortcut from here — try a broader link");
+    }
+  }catch(err){
+    showToast("Couldn't fetch a hint — check your connection");
+  }
+  btn.disabled = false;
+  btn.textContent = originalLabel;
+}
+
+async function handleNavigate(title){
+  if(state.won) return;
+  renderLoading('Turning the page…');
+  try{
+    const article = await getPreparedArticle(title);
+    state.clicks += 1;
+    state.current = article.title;
+    state.trail.push(article.title);
+    topbar.style.display = 'block';
+    renderArticle(article);
+
+    if(normalize(article.title) === normalize(state.target)){
+      state.won = true;
+      showWin();
+    }
+  }catch(err){
+    renderError("That page wouldn't load. The trail may have hit a redirect or a network hiccup.", () => handleNavigate(title));
+  }
+}
+
+function showWin(){
+  const overlay = document.createElement('div');
+  overlay.className = 'win-overlay';
+  overlay.innerHTML = `
+    <div class="win-card">
+      <div class="flag">🏁</div>
+      <h2>${player.name}, you reached ${state.target}!</h2>
+      <p>Trail complete — nicely navigated, traveler from ${player.place}.</p>
+      <div class="win-stats">
+        <div class="row"><span>Clicks taken</span><span>${state.clicks}</span></div>
+        <div class="row"><span>Pages visited</span><span>${state.trail.length}</span></div>
+      </div>
+      <div class="win-trail mono">${state.trail.join(' → ')}</div>
+      <div class="btn-row" style="margin-top:18px;">
+        <button class="btn" id="again-btn">Play again</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('again-btn').addEventListener('click', ()=>{
+    overlay.remove();
+    startGame();
+  });
+}
+
+async function startGame(){
+  state = { target: null, current: null, trail: [], clicks: 0, won: false, targetBacklinks: null, currentLinkTitles: [] };
+  topbar.style.display = 'none';
+  renderLoading('Rolling the dice on a starting page…');
+  try{
+    let article = null;
+    for(let attempt = 0; attempt < 5; attempt++){
+      const startTitle = await fetchRandomTitle();
+      const candidate = await getPreparedArticle(startTitle);
+      if(countLinks(candidate.html) >= 6 || attempt === 4){
+        article = candidate;
+        break;
+      }
+    }
+    state.target = pickTarget(article.title);
+    state.current = article.title;
+    state.trail = [article.title];
+    topbar.style.display = 'block';
+    renderArticle(article);
+  }catch(err){
+    renderError("Couldn't reach Wikipedia to start the quest. Check your connection and try again.", startGame);
+  }
+}
+
+document.getElementById('hint-btn').addEventListener('click', handleHint);
+renderEntryScreen();
+</script>
+</body>
+</html>
