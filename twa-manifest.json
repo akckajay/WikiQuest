@@ -1,0 +1,25 @@
+{
+  "packageId": "com.akckajay.wikiquest",
+  "host": "akckajay.github.io",
+  "name": "WikiQuest",
+  "launcherName": "WikiQuest",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#14201A",
+  "navigationColor": "#14201A",
+  "backgroundColor": "#0D1712",
+  "startUrl": "/WikiQuest/",
+  "iconUrl": "https://akckajay.github.io/WikiQuest/icons/icon-512.png",
+  "maskableIconUrl": "https://akckajay.github.io/WikiQuest/icons/icon-512.png",
+  "webManifestUrl": "https://akckajay.github.io/WikiQuest/manifest.json",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "wikiquest"
+  },
+  "enableNotifications": false,
+  "splashScreenFadeOutDuration": 300
+}
